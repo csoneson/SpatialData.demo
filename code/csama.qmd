@@ -869,15 +869,17 @@ search, it is typically set much lower in order to reduce computational effort.
 ```{r, warning=FALSE}
 # get spatial coordinates
 xy <- centroids(SpatialData::transform(shape(sd)))
-# get cells in radial neighborhood of 100 units
-nn <- nn2(xy, searchtype="radius", r=100, k=31) 
-is <- nn$nn.idx[, -1]   # exclude self
-ns <- rowSums(is > 0)   # number of NNs
+
+# get cells in radial neighborhood
+nn <- nn2(xy, searchtype="radius", r=r <- 100, k=k <- 51) 
+
+is <- nn$nn.idx[, -1] # exclude self
+ns <- rowSums(is > 0) # number of NNs
 summary(ns)
 ```
 
 Here, we find that cells have `r paste(range(ns), collapse="-")` neighbors 
-(`r round(mean(ns))` on average) within a radius of 100 units. This seems
+(`r round(mean(ns))` on average) within a radius of `r r` units. This seems
 adequeate enough to capture local neighborhoods without being too large.
 
 ::: {.callout-note collapse="true" title="More about nearest neighbors"}
@@ -891,6 +893,13 @@ Then, `k` should be set such that this distribution *tails off*, i.e., there
 are few if any cells with more neighbors (or, `r` should be made smaller). 
 Non-quantitatively speaking, we'd like to have enough NNs for quantification, 
 but they should fall close enough to be meaningful (e.g., paracrine signaling).
+
+```{r echo=-1, fig.width=5, fig.height=3, fig.align="center"}
+par(mar=c(4,4,0.5,0))
+hist(ns, breaks=seq(0, k+1)-0.5, col="steelblue", border="lavender", 
+    main="", xlab="# NNs within 100 units distance", ylab="# cells")
+```
+
 :::
 
 We can now quantify the relative subpopulation composition around each cell,
