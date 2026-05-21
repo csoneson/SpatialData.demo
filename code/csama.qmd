@@ -778,7 +778,7 @@ To explore additional `SegTraQ` metrics, please refer to the
 and improvements will keep being introduced in future releases.
 :::
 
-### Processing
+### Filtering
 
 The `SpatialData` object contains a single `table` element -- represented as a
 `r BiocStyle::Biocpkg("SingleCellExperiment")` -- annotating `cell_boundaries`.
@@ -790,9 +790,8 @@ spatial coordinates (`reducedDim` slot `"spatial"`).
 (se <- table(sd))
 ```
 
-#### Filtering
-
-Because data are represented as a SCE, we can perform standard processing tasks using tools available in R/Bioc (e.g., `r BiocStyle::Biocpkg("scrapper")`) such
+Because data are represented as a SCE, we can perform standard processing tasks 
+using tools available in R/Bioc (e.g., `r BiocStyle::Biocpkg("scrapper")`) such
 as filtering little informative cells based on, e.g., `transcript_density`:
 
 ```{r fil}
@@ -810,6 +809,8 @@ plotSpatialData() +
     scale_fill_manual("exclude", values=c("grey", "red"))
 ```
 
+### Processing
+
 We'll here filter out cells with comparatively low transcript density,
 and proceed with processing steps standard for scRNA-seq data, namely:
 
@@ -824,9 +825,9 @@ base::table(se$ex)
 se <- se[, !se$ex]
 assayNames(se) <- "counts"
 se <- normalizeRnaCounts.se(se)
-se <- chooseRnaHvgs.se(se)
+se <- chooseRnaHvgs.se(se, top=2e3)
 se <- runPca.se(se, features=rowData(se)$hvg)
-se <- clusterGraph.se(se, method="leiden", resolution=0.5)
+se <- clusterGraph.se(se, method="leiden", resolution=0.4)
 nk <- nlevels(se$clusters)
 table(sd) <- se
 ```
@@ -988,10 +989,17 @@ pp <- ppp(x=xy[, 1], y=xy[, 2], window=ow, marks=se$clusters)
 
 We can now use cellular density (more precisely, the `ppp`'s intensity)
 to identify multi-cellular anatomical substructures using `sosta`;
-we'll then assign these to our object as a new `shape` element:
+we'll then assign these to our object as a new `shape` element.
+Here, we based structure calling on malignant subpopulations:[DCIS = 
+ductal carcinoma in situ is a very early form of breast cancer.]{.aside}
 
 ```{r sosta-roi, message=FALSE}
-use <- which.max(table(se$clusters))
+# identify malignant cluster(s)
+tum <- c("DCIS1", "DCIS2", "tumor")
+idx <- se$transferred_cell_type %in% tum
+(use <- names(which.max(table(se$clusters[idx]))))
+
+# reconstruct ROIs based on cellular density
 roi <- reconstructShapeDensity(pp, markSelect=use, dim=400)
 st_geometry(roi) <- "geometry"
 roi <- SpatialDataShape(roi)
@@ -1002,7 +1010,7 @@ shape(sd, "roi") <- roi
 #| code-fold: true
 plotSpatialData() + 
     plotShape(sd, col=NA, fill="clusters") + 
-    plotShape(sd, "roi", col="red", fill=NA, linewidth=1) +
+    plotShape(sd, "roi", fill=NA, linewidth=1) +
     scale_fill_manual(values=hcl.colors(nk, "Spectral")) 
 ```
 
@@ -1028,11 +1036,11 @@ mean(ns[-1])  # on average
 ns[1]         # unassigned
 ```
 
-While `sosta` has identified `r ncol(pb)-1` regions, we'll filter those that
-comprise at least 10 cells in order to rid ourselves of spurious findings:
+While `sosta` has identified `r ncol(pb)-1` regions, we'll filter out those
+comprising fewer than 100 cells in order to rid ourselves of spurious findings:
 
 ```{r}
-pb <- pb[, pb$n_instances >= 10]
+ncol(pb <- pb[, pb$n_instances >= 100])
 ```
 
 Since we have tracked the indices of cells falling within each region, 
@@ -1045,7 +1053,7 @@ pseudobulks across sections, e.g., in terms of differential expression
 or cell type abundances (T cell exhaustion, immune infiltration, etc.).
 :::
 
-```{r fig.width=8, fig.height=4}
+```{r fig.width=6, fig.height=3, fig.align="center"}
 #| code-fold: true
 # count clusters by region
 is <- pb$i_instances[-1]            # cell indices by region
@@ -1073,7 +1081,7 @@ wrap_plots(p1, p2, guides="collect") &
     scale_fill_manual(values=pal) &
     coord_cartesian(expand=FALSE) &
     theme_bw() & theme(
-        aspect.ratio=3/2,
+        aspect.ratio=1,
         panel.grid.minor=element_blank(),
         panel.grid.major.y=element_blank(),
         legend.key.size=unit(2/3, "lines"))
