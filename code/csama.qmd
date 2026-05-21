@@ -116,7 +116,7 @@ bb <- list(
     xmin=15e3, xmax=18e3, 
     ymin=44e3, ymax=46e3)
 sp <- crop(sd, bb)
-plotSpatialData() + plotImage(sp) 
+plotSpatialData() + plotImage(sp)
 ```
 
 #### Immunofluorescence
@@ -858,6 +858,14 @@ For such type of analysis, it's important to get a sense of how many neighbors
 are typically found within a given radius; this can help decide on a meaningful 
 distance threshold to use for colocalization analysis.
 
+::: {.column-margin}
+Caution: `RANN`'s `nn2()` function provides options for `"standard"` and 
+distance-thresholded `k`NN search (`searchtype="radius"`). In any case, `k` 
+determines the *maximum* number of NNs to compute (even if there are more!).
+Although a `k` equal to the number of `query` observations allows an exhaustive 
+search, it is typically set much lower in order to reduce computational effort.
+:::
+
 ```{r, warning=FALSE}
 # get spatial coordinates
 xy <- centroids(SpatialData::transform(shape(sd)))
@@ -871,6 +879,19 @@ summary(ns)
 Here, we find that cells have `r paste(range(ns), collapse="-")` neighbors 
 (`r round(mean(ns))` on average) within a radius of 100 units. This seems
 adequeate enough to capture local neighborhoods without being too large.
+
+::: {.callout-note collapse="true" title="More about nearest neighbors"}
+The number of NNs within a given distance (or, the distance yielding a given 
+number of NNs) can vary greatly between tissue types. It is generally a good 
+idea to perform a NNs search with a reasonably large `k`, and to inspect the 
+number of NNs across cells (e.g., `hist(rowSums(...$nn.idx > 0))`). When data 
+are large (millions of cells), this could use a few representative sections. 
+
+Then, `k` should be set such that this distribution *tails off*, i.e., there
+are few if any cells with more neighbors (or, `r` should be made smaller). 
+Non-quantitatively speaking, we'd like to have enough NNs for quantification, 
+but they should fall close enough to be meaningful (e.g., paracrine signaling).
+:::
 
 We can now quantify the relative subpopulation composition around each cell,
 and summarize this at the cluster level to get a sense of which cell types 
@@ -896,8 +917,8 @@ Within this latter module, EC/PV are especially attraced to one another.
 ::: {.column-margin}
 EC/PV attraction is consistent with the fact that EC line the interior of 
 blood vessels, while PV (pericytes and smooth muscle cells) envelop them.
-Together, they form a functional unit for tissue homeostasis, providing 
-stability and helping regulate blood vessles formation and permability.
+Together, they form a functional unit for tissue homeostasis that provides
+stability and helps regulate blood vessle formation as well as permability.
 :::
 
 ```{r colo-plot, fig.height=3.5}
