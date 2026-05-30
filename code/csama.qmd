@@ -14,10 +14,19 @@ data on a tissue section from a human breast cancer biopsy,
 derived from [here](https://www.10xgenomics.com/datasets/xenium-prime-ffpe-human-breast-cancer).
 These include the following elements:
 
-- two `image`s (histology and immunofluorescence)
-- two `shape`s (nuclei and membrane boundaries)
-- one `table` (gene $\times$ cell data)
-- one `point` (RNA transcripts)
+- two `image` objects: 
+  - hematoxylin and eosin staining ("he_image"), and 
+  - 4-plex immunofluorescence image ("morphology_focus")
+- two `shape` objects: 
+  - cell membrane ("cell_boundaries"), and
+  - nuclei segmentation ("nucleus_boundaries")
+- one `table` object: 
+  - gene $\times$ cell transcript counts  
+    (based on "cell_boundaries")
+- one `point` object:
+  - individual RNA transcripts  
+    (across 5,101 genes)
+
 
 ### Preamble
 
@@ -64,7 +73,7 @@ cat(basename(zs))
 htmltools::pre(
     style="max-height:333px; overflow-y:auto;",
     paste(
-        capture.output(fs::dir_tree(zs, recurse=2))[-1],
+        capture.output(fs::dir_tree(zs, recurse=6))[-1],
         collapse="\n"))
 ```
 
@@ -1117,7 +1126,7 @@ plotSpatialData() +
 AI tells us *"X-box binding protein 1 (XBP1) is a key transcription factor, 
 activated by the IRE1/XBP1 branch of the Unfolded Protein Response (UPR), 
 which promotes breast cancer development, progression, and resistance to 
-therapy."*; so let's believe that makes sense, be proud, and leave it here.
+therapy."*; so let's believe that makes sense, be proud, and move on.
 
 ### appendix
 
