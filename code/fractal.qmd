@@ -26,24 +26,31 @@ cat(basename(zs))
 ```
 
 ```{r read-data}
+# read in image & label
 iz <- file.path(zs, "B/03/0")
 lz <- file.path(iz, "labels/nuclei")
-
 (i <- addCT(readImage(iz), "foo"))
 (l <- addCT(readLabel(lz), "foo"))
 
+# construct SD object
 sd <- SpatialData(
     images=list(image=i),
     labels=list(cells=l))
 
-id <- unique(SparseArray::nzvals(data(label(sd))))
-se <- SingleCellExperiment(colData=DataFrame(id))
-(sd <- setTable(sd, "cells", se))
+# average channel intensities by cell
+sd <- mask(sd, "image", "cells", how="mean")
+table(sd)$id <- seq(ncol(table(sd)))
+sd
 ```
 
-### analysis
+```{r, echo=-1, fig.width=5, fig.height=3}
+par(mar=c(4,4,0,0))
+hist(assay(table(sd))[1, ], 
+    n=100, col="steelblue", border="white",
+    main="", xlab="mean DAPI", ylab="# cells")
+```
 
-```{r fig.width=6, fig.height=9}
+```{r fig.width=6, fig.height=8}
 pal <- sample(colors(), ncol(table(sd)), replace=TRUE)
 a <- plotSpatialData() + 
     plotImage(sd) 
@@ -55,6 +62,18 @@ c <- plotSpatialData() +
     plotLabel(sd, c="id", pal=pal, a=2/3) +
     theme(legend.position="none")
 wrap_plots(a, b, c, ncol=1)
+```
+
+```{r}
+bb <- list(xmin=200, xmax=600, ymin=0, ymax=300)
+image(sd, "bb") <- crop(image(sd), bb)
+
+bb <- list(xmin=300, xmax=500, ymin=100, ymax=200)
+label(sd, "bb") <- crop(label(sd), bb)
+
+plotSpatialData() + 
+    plotImage(sd, 2) +
+    plotLabel(sd, 2, pal="red", a=2/3)
 ```
 
 ### appendix
