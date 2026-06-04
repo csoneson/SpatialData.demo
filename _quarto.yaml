@@ -26,6 +26,7 @@ website:
   navbar:
     left:
       - code/csama.qmd
+      - code/fractal.qmd
       - code/merfish.qmd
       - code/mibitof.qmd
       - code/mcmicro.qmd

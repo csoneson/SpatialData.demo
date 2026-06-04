@@ -1,0 +1,70 @@
+## Fractal
+
+### preamble
+
+```{r load-libs}
+library(ggplot2)
+library(patchwork)
+library(spatialdataR)
+library(SpatialData.plot)
+library(SingleCellExperiment)
+```
+
+```{r load-data}
+url <- sprintf(
+    "https://zenodo.org/records/10519143/files/%s.zip?download=1",
+    fnm <- "20200812-CardiomyocyteDifferentiation14-Cycle1.zarr")
+
+# retrieve
+zip <- tempfile(fileext=".zip")
+download.file(url, zip, quiet=TRUE)
+
+# decompress
+unzip(zip, exdir=dirname(zip))
+zs <- file.path(dirname(zip), fnm)
+cat(basename(zs))
+```
+
+```{r read-data}
+iz <- file.path(zs, "B/03/0")
+lz <- file.path(iz, "labels/nuclei")
+
+(i <- addCT(readImage(iz), "foo"))
+(l <- addCT(readLabel(lz), "foo"))
+
+sd <- SpatialData(
+    images=list(image=i),
+    labels=list(cells=l))
+
+id <- unique(SparseArray::nzvals(data(label(sd))))
+se <- SingleCellExperiment(colData=DataFrame(id))
+(sd <- setTable(sd, "cells", se))
+```
+
+### analysis
+
+```{r fig.width=6, fig.height=9}
+pal <- sample(colors(), ncol(table(sd)), replace=TRUE)
+a <- plotSpatialData() + 
+    plotImage(sd) 
+b <- plotSpatialData() + 
+    plotLabel(sd, c="id", pal=pal, a=2/3) + 
+    theme(legend.position="none")
+c <- plotSpatialData() + 
+    plotImage(sd) +
+    plotLabel(sd, c="id", pal=pal, a=2/3) +
+    theme(legend.position="none")
+wrap_plots(a, b, c, ncol=1)
+```
+
+### appendix
+
+::: {.callout-note icon=false, collapse=true}
+
+### session
+
+```{r sess-info}
+sessionInfo()
+```
+
+:::
