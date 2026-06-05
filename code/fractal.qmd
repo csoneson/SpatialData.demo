@@ -22,6 +22,7 @@ The dataset is available via [Zenodo](https://zenodo.org/records/10519143).
 ### Preamble
 
 ```{r load-libs, message=FALSE, warning=FALSE}
+library(sf)
 library(ggplot2)
 library(patchwork)
 library(spatialdataR)
@@ -189,7 +190,7 @@ b <- plotSpatialData() +
 wrap_plots(a, b, nrow=1)
 ```
 
-## Add label IDs and zoom in to a specific object
+## Add label IDs
 
 ```{r fig-add-labels}
 # extract data.frame of cell centroids to label cell IDs
@@ -206,10 +207,19 @@ plotSpatialData() +
     theme(legend.position="none")
 ```
 
-```{r fig-show-label, eval=FALSE}
+## Zoom in to a specific object
+
+```{r fig-show-label}
+# square expansion around cell of interest
+ci <- xy[33, ]
+pt <- st_as_sf(ci, coords=c("x", "y"))
+bb <- st_bbox(st_buffer(pt, dist=10))
+sp <- crop(sd, bb)
+
 plotSpatialData() + 
-    plotImage(sd, "image_bbSmall") +
-    plotLabel(sd, "cells_bbSmall", c="id", pal=pal, a=2/3) +
+    plotImage(sp) +
+    plotLabel(sp, c="id", pal=pal, a=2/3) +
+    geom_text(aes(x, y, label=i), data=ci, color="white", size=12) +
     theme(legend.position="none")
 ```
 
