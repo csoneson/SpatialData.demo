@@ -1,19 +1,44 @@
+---
+author:
+  - name: Helena L Crowell
+    affiliation: CNAG, Barcelona, Spain
+  - name: Charlotte Soneson
+    affiliation: FMI, Basel, Switzerland
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+---
+
+```{r set-timeout}
+#| echo: false
+
+options(timeout = 1000)
+```
+
 ## Fractal
 
-### preamble
+In this demo we will work with an example data set consisting of human induced 
+pluripotent stem cells, imaged at 40x magnification with a Yokogawa CV7000 
+microscope and processed using [Fractal](https://fractal-analytics-platform.github.io/).
+The dataset is available via [Zenodo](https://zenodo.org/records/10519143).
+
+### Preamble
 
 ```{r load-libs}
-library(ggplot2)
-library(patchwork)
-library(spatialdataR)
-library(SpatialData.plot)
-library(SingleCellExperiment)
+suppressPackageStartupMessages({
+    library(ggplot2)
+    library(patchwork)
+    library(spatialdataR)
+    library(SpatialData.plot)
+    library(SingleCellExperiment)
+})
 ```
+
+We first download the compressed OME-Zarr file from Zenodo and expand the content.
 
 ```{r load-data}
 url <- sprintf(
     "https://zenodo.org/records/10519143/files/%s.zip?download=1",
-    fnm <- "20200812-CardiomyocyteDifferentiation14-Cycle1.zarr")
+    fnm <- "20200812-CardiomyocyteDifferentiation14-Cycle1.zarr"
+)
 
 # retrieve
 zip <- tempfile(fileext=".zip")
@@ -25,38 +50,83 @@ zs <- file.path(dirname(zip), fnm)
 cat(basename(zs))
 ```
 
+Next, we construct the `SpatialData` object from the OME-Zarr file. Note that 
+the folder structure is slightly different from what is expected by 
+`readSpatialData()`, and hence we read the image and labels using the 
+respective import functions, and create the `SpatialData` object manually.
+In addition, we calculate the average channel intensity per cell, and add 
+a column with cell IDs. 
+
 ```{r read-data}
 # read in image & label
 iz <- file.path(zs, "B/03/0")
 lz <- file.path(iz, "labels/nuclei")
-(i <- addCT(readImage(iz), "foo"))
-(l <- addCT(readLabel(lz), "foo"))
+(i <- addCT(readImage(iz), name="global"))
+(l <- addCT(readLabel(lz), name="global"))
 
 # construct SD object
 sd <- SpatialData(
     images=list(image=i),
-    labels=list(cells=l))
+    labels=list(cells=l)
+)
 
 # average channel intensities by cell
 sd <- mask(sd, "image", "cells", how="mean")
+
+# cell IDs
 table(sd)$id <- seq(ncol(table(sd)))
+
 sd
 ```
 
-```{r, echo=-1, fig.width=5, fig.height=3}
-par(mar=c(4,4,0,0))
-hist(assay(table(sd))[1, ], 
-    n=100, col="steelblue", border="white",
-    main="", xlab="mean DAPI", ylab="# cells")
+### Explore `SpatialData` object
+
+```{r explore-sd}
+# channels
+channels(image(sd, 1))
+
+# metadata for image
+meta(image(sd, 1))
+
+# metadata for labels
+meta(label(sd, "cells"))
+
+# table
+table(sd, "image_by_cells")
+
+# dimensions
+spatialdataR::data(image(sd, "image"), NULL) |> sapply(dim)
+spatialdataR::data(label(sd, "cells"), NULL) |> sapply(dim)
 ```
 
-```{r fig.width=6, fig.height=8}
+## Plot distribution of mean channel intensities per cell
+
+The mean channel intensity per cell was calculated above and is stored in the 
+`mean` assay of the `image_by_cells` table in `sd`.
+
+```{r fig-mean-dapi, echo=-1, fig.width=5, fig.height=3}
+
+ggplot(data.frame(meanDAPI=assay(table(sd), "mean")[1, ]), 
+       aes(x=meanDAPI)) + 
+    geom_histogram(bins=100, fill="steelblue", color="white") + 
+    labs(x="Mean DAPI signal", y="Number of cells") +
+    theme_bw()
+```
+
+## Plot full image
+
+```{r fig-full-image, fig.width=6, fig.height=8}
+# sample colors
 pal <- sample(colors(), ncol(table(sd)), replace=TRUE)
+
+# only image
 a <- plotSpatialData() + 
     plotImage(sd) 
+# only labels
 b <- plotSpatialData() + 
     plotLabel(sd, c="id", pal=pal, a=2/3) + 
     theme(legend.position="none")
+# image + labels
 c <- plotSpatialData() + 
     plotImage(sd) +
     plotLabel(sd, c="id", pal=pal, a=2/3) +
@@ -64,23 +134,131 @@ c <- plotSpatialData() +
 wrap_plots(a, b, c, ncol=1)
 ```
 
-```{r}
-bb <- list(xmin=200, xmax=600, ymin=0, ymax=300)
-image(sd, "bb") <- crop(image(sd), bb)
+## Add a scale bar
 
-bb <- list(xmin=300, xmax=500, ymin=100, ymax=200)
-label(sd, "bb") <- crop(label(sd), bb)
-
+```{r fig-scalebar, fig.width=6, fig.height=3, eval=FALSE}
 plotSpatialData() + 
-    plotImage(sd, 2) +
-    plotLabel(sd, 2, pal="red", a=2/3)
+    plotImage(sd) 
 ```
 
-### appendix
+## Zoom in
+
+It is often useful to zoom in to predefined regions of interest in an image. 
+With this in mind, we first define two bounding boxes (a 'large' one and a 
+'small' one), and crop both the image and labels to each of the bounding boxes. 
+
+```{r def-bounding-boxes}
+bbLarge <- list(xmin=100, xmax=600, ymin=0, ymax=300)
+image(sd, "image_bbLarge") <- crop(image(sd, "image"), y=bbLarge)
+label(sd, "cells_bbLarge") <- crop(label(sd, "cells"), y=bbLarge)
+
+bbSmall <- list(xmin=141, xmax=311, ymin=130, ymax=300)
+image(sd, "image_bbSmall") <- crop(image(sd, "image"), y=bbSmall)
+label(sd, "cells_bbSmall") <- crop(label(sd, "cells"), y=bbSmall)
+
+sd <- mask(sd, "image_bbSmall", "cells_bbSmall", how="mean")
+table(sd, "image_bbSmall_by_cells_bbSmall")$id <- 
+    seq(ncol(table(sd, "image_bbSmall_by_cells_bbSmall")))
+```
+
+We can visualize the image with overlaid labels cropped to the same bounding box.
+
+```{r fig-bb-same}
+plotSpatialData() + 
+    plotImage(sd, "image_bbSmall") +
+    plotLabel(sd, "cells_bbSmall", c="id", pal=pal, a=2/3) +
+    theme(legend.position="none")
+```
+
+We can also use different bounding boxes for the image and labels.
+
+```{r fig-bb-diff}
+plotSpatialData() + 
+    plotImage(sd, "image_bbLarge") +
+    plotLabel(sd, "cells_bbSmall", pal="red", a=2/3)
+```
+
+## Use a lower resolution
+
+We can plot a lower-resolution pyramid level by setting the `k` argument to 
+`plotImage()`.
+
+```{r fig-res}
+a <- plotSpatialData() + 
+    plotImage(sd, "image_bbSmall", k=1) + 
+    ggtitle("High resolution")
+b <- plotSpatialData() + 
+    plotImage(sd, "image_bbSmall", k=5) + 
+    ggtitle("Low resolution")
+wrap_plots(a, b, nrow=1)
+```
+
+## Add label IDs and zoom in to a specific object
+
+```{r fig-add-labels, eval=FALSE}
+plotSpatialData() + 
+    plotImage(sd, "image_bbSmall") +
+    plotLabel(sd, "cells_bbSmall", c="id", pal=pal, a=2/3) +
+    theme(legend.position="none")
+```
+
+```{r fig-show-label, eval=FALSE}
+plotSpatialData() + 
+    plotImage(sd, "image_bbSmall") +
+    plotLabel(sd, "cells_bbSmall", c="id", pal=pal, a=2/3) +
+    theme(legend.position="none")
+```
+
+## Visualise image with time axis
+
+To illustrate how to work with an image with a time dimension, we download 
+another example data set, showing a tubulin histone GFP coexpressing C. elegans 
+embryo. The original data set was acquired on a multiphoton workstation by 
+Josh Bembenek, and is freely available from 
+[openmicroscopy.org](openmicroscopy.org). The data set used here (provided 
+as an example data in the [ez-zarr](https://pypi.org/project/ez-zarr/) package) 
+is a subset of the original image (2 timepoints, 1 channel, 2 z-planes). In 
+addition, a manual segmentation label was added for illustration purposes.
+
+```{r get-time-data, eval=FALSE}
+url = "https://github.com/fmicompbio/ez_zarr/archive/refs/heads/main.zip"
+
+# retrieve
+zip <- tempfile(fileext=".zip")
+download.file(url, zip, quiet=TRUE)
+
+# decompress
+unzip(zip, exdir=dirname(zip))
+zst <- file.path(dirname(zip), "ez_zarr-main")
+cat(basename(zst))
+
+# read in image & label
+iz <- file.path(zst, "tests", "example_data_5d", "tubhiswt4D_sub.zarr")
+lz <- file.path(iz, "labels", "embryo")
+(i <- addCT(readImage(iz), name="global"))
+(l <- addCT(readLabel(lz), name="global"))
+
+# construct SD object
+sdt <- SpatialData(
+    images=list(image=i),
+    labels=list(embryo=l)
+)
+
+# average channel intensities by cell
+sd <- mask(sd, "image", "embryo", how="mean")
+
+# embryo IDs
+table(sd)$id <- seq(ncol(table(sd)))
+
+sd
+```
+
+
+### Appendix
 
 ::: {.callout-note icon=false, collapse=true}
 
-### session
+### Session
 
 ```{r sess-info}
 sessionInfo()
