@@ -101,10 +101,9 @@ label(sd, "cells") |> data(NULL) |> sapply(dim)
 The mean channel intensity per cell was calculated above and is stored in the 
 `mean` assay of the `image_by_cells` table in `sd`.
 
-```{r fig-mean-dapi, fig.width=6, fig.height=3}
-mx <- assay(table(sd), "mean")
+```{r fig-mean-dapi, fig.width=8, fig.height=3}
+mx <- assay(table(sd, "image_by_cells"))
 df <- data.frame(meanDAPI=mx[1, ])
-
 ggplot(df, aes(x=meanDAPI)) + 
     geom_histogram(bins=100, fill="steelblue", col="white") + 
     labs(x="Mean DAPI signal", y="Number of cells") +
@@ -211,7 +210,7 @@ plotSpatialData() +
 
 ```{r fig-show-label}
 # square expansion around cell of interest
-ci <- xy[33, ]
+ci <- xy[xy$i == "574", ]
 pt <- st_as_sf(ci, coords=c("x", "y"))
 bb <- st_bbox(st_buffer(pt, dist=10))
 sp <- crop(sd, bb)
@@ -234,7 +233,7 @@ as an example data in the [ez-zarr](https://pypi.org/project/ez-zarr/) package)
 is a subset of the original image (2 timepoints, 1 channel, 2 z-planes). In 
 addition, a manual segmentation label was added for illustration purposes.
 
-```{r get-time-data, eval=FALSE}
+```{r get-time-data}
 url = "https://github.com/fmicompbio/ez_zarr/archive/refs/heads/main.zip"
 
 # retrieve
@@ -255,18 +254,16 @@ lz <- file.path(iz, "labels", "embryo")
 # construct SD object
 sdt <- SpatialData(
     images=list(image=i),
-    labels=list(embryo=l)
-)
+    labels=list(embryo=l))
 
-# average channel intensities by cell
-sd <- mask(sd, "image", "embryo", how="mean")
+# for each timepoint, average channel intensities by cell
+sdt <- mask(sdt, "image", "embryo", how="mean")
 
 # embryo IDs
-table(sd)$id <- seq(ncol(table(sd)))
-
-sd
+table(sdt)$id <- seq(ncol(table(sdt)))
+(se <- table(sdt))
+sapply(assays(se), as.vector)
 ```
-
 
 ### Appendix
 
