@@ -131,12 +131,14 @@ c <- plotSpatialData() +
 wrap_plots(a, b, c, ncol=1)
 ```
 
-## Add a scale bar
+## Add a scale bar and a plot title, and set contrast limits
 
 ```{r fig-scalebar, fig.width=6, fig.height=3}
+# values are uint16 - scale contrast limits by maximum value (2^16-1)
 plotSpatialData() + 
-    plotImage(sd) +
-    scalebar(image(sd), len = 150, col = "red", xrel = 0.95, yrel = 0.95)
+    plotImage(sd, cl=list(c(100, 600)/65535)) +
+    scalebar(image(sd), len = 150, col = "yellow", xrel = 0.05, yrel = 0.95) + 
+    ggtitle("cardio-d14")
 ```
 
 ## Zoom in
