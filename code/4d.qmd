@@ -48,7 +48,8 @@ ps <- lapply(seq(2, nz, 2), \(z) {
         ggtitle(paste("z =", z)) +
         theme(legend.position="none") +
         plotImage(sd, z=z, t=1, c="white") +
-        plotLabel(sd, z=z, t=1, a=1/3, pal="green")
+        plotLabel(sd, z=z, t=1, a=1/3, pal="green") +
+        scalebar(image(sd), len=10, xrel=0.9, yrel=0.9) 
 })
 ```
 
@@ -61,6 +62,10 @@ system("bash -c 'magick -delay 10 $(ls *.png | sort) $(ls *.png | sort -r | tail
 file.remove(list.files(pattern=".png"))
 ```
 
+```{r}
+knitr::include_graphics("z-video.gif")
+```
+
 ```{r message=FALSE}
 ax <- axes(image(sd), "name")
 ti <- which(ax == "t")
@@ -70,7 +75,8 @@ ps <- lapply(seq(2, nt, 2), \(t) {
         ggtitle(paste("t =", t)) +
         theme(legend.position="none") +
         plotImage(sd, z=10, t=t, c="white") +
-        plotLabel(sd, z=10, t=t, a=1/3, pal="green")
+        plotLabel(sd, z=10, t=t, a=1/3, pal="green") +
+        scalebar(image(sd), len=10, xrel=0.9, yrel=0.9) 
 })
 ```
 
