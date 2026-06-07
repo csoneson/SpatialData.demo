@@ -35,7 +35,7 @@ channels(image(sd))
 ax <- axes(image(sd), "name")
 zi <- which(ax == "z")
 nz <- dim(image(sd))[zi]
-ps <- lapply(seq_len(nz), \(z) {
+ps <- lapply(seq(2, nz, 2), \(z) {
     plotSpatialData() + 
         ggtitle(paste("z =", z)) +
         theme(legend.position="none") +
@@ -44,15 +44,37 @@ ps <- lapply(seq_len(nz), \(z) {
 ```
 
 ```{r results="hide"}
-png(file="z%02d.png", width=200, height=200)
+png(file="z%02d.png", width=300, height=300)
 for (p in ps) print(p)
 dev.off()
  
-system("magick -delay 10 *.png video.gif")
+system("bash -c 'magick -delay 10 $(ls *.png | sort) $(ls *.png | sort -r | tail -n +2) -loop 0 z-video.gif'")
 file.remove(list.files(pattern=".png"))
 ```
 
-<img src="../video.gif" width="400" height="400">
+```{r}
+ax <- axes(image(sd), "name")
+ti <- which(ax == "t")
+nt <- dim(image(sd))[ti]
+ps <- lapply(seq(2, nt, 2), \(t) {
+    plotSpatialData() + 
+        ggtitle(paste("t =", t)) +
+        theme(legend.position="none") +
+        plotImage(sd, z=10, t=t, c="white")
+})
+```
+
+```{r results="hide"}
+png(file="z%02d.png", width=300, height=300)
+for (p in ps) print(p)
+dev.off()
+ 
+system("bash -c 'magick -delay 10 $(ls *.png | sort) $(ls *.png | sort -r | tail -n +2) -loop 0 t-video.gif'")
+file.remove(list.files(pattern=".png"))
+```
+
+<img src="../z-video.gif" width="300" height="300">
+<img src="../t-video.gif" width="300" height="300">
 
 ### appendix
 
