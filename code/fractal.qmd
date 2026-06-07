@@ -133,9 +133,10 @@ wrap_plots(a, b, c, ncol=1)
 
 ## Add a scale bar
 
-```{r fig-scalebar, fig.width=6, fig.height=3, eval=FALSE}
+```{r fig-scalebar, fig.width=6, fig.height=3}
 plotSpatialData() + 
-    plotImage(sd) 
+    plotImage(sd) +
+    scalebar(image(sd), len = 150, col = "red", xrel = 0.95, yrel = 0.95)
 ```
 
 ## Zoom in
@@ -264,6 +265,17 @@ table(sdt)$id <- seq(ncol(table(sdt)))
 (se <- table(sdt))
 sapply(assays(se), as.vector)
 ```
+
+```{r plot-time-data}
+plotSpatialData() + 
+    plotImage(sdt, i="image", t=1) + 
+    scalebar(image(sdt), len=150, col="purple") + 
+    theme(legend.position="none", 
+          axis.ticks = element_blank(),
+          axis.title = element_blank(),
+          axis.text = element_blank())
+```
+
 
 ### Appendix
 
