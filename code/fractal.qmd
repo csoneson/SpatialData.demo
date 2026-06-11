@@ -9,7 +9,7 @@ date: "`r format(Sys.Date(), '%B %d, %Y')`"
 
 ```{r set-timeout}
 #| echo: false
-options(timeout = 1000)
+options(timeout=1000)
 ```
 
 ## Fractal
@@ -137,7 +137,7 @@ wrap_plots(a, b, c, ncol=1)
 # values are uint16 - scale contrast limits by maximum value (2^16-1)
 plotSpatialData() + 
     plotImage(sd, cl=list(c(100, 600)/65535)) +
-    scalebar(image(sd), len = 150, col = "yellow", xrel = 0.05, yrel = 0.95) + 
+    scalebar(image(sd), len=150, col="yellow", xrel=0.05, yrel=0.95) + 
     ggtitle("cardio-d14")
 ```
 
@@ -225,7 +225,7 @@ plotSpatialData() +
     theme(legend.position="none")
 ```
 
-## Visualise image with time axis
+## Visualize image with time axis
 
 To illustrate how to work with an image with a time dimension, we download 
 another example data set, showing a tubulin histone GFP coexpressing C. elegans 
@@ -237,7 +237,7 @@ is a subset of the original image (2 timepoints, 1 channel, 2 z-planes). In
 addition, a manual segmentation label was added for illustration purposes.
 
 ```{r get-time-data}
-url = "https://github.com/fmicompbio/ez_zarr/archive/refs/heads/main.zip"
+url <- "https://github.com/fmicompbio/ez_zarr/archive/refs/heads/main.zip"
 
 # retrieve
 zip <- tempfile(fileext=".zip")
@@ -273,11 +273,51 @@ plotSpatialData() +
     plotImage(sdt, i="image", t=1) + 
     scalebar(image(sdt), len=150, col="purple") + 
     theme(legend.position="none", 
-          axis.ticks = element_blank(),
-          axis.title = element_blank(),
-          axis.text = element_blank())
+          axis.ticks=element_blank(),
+          axis.title=element_blank(),
+          axis.text=element_blank())
 ```
 
+Alternatively, we can loop through timepoints and generate an animation (.gif)
+using `magick`; briefly, we write each plot to .png, read as a `magick-image`,
+write a .gif, and display it using R Markdown syntax `![](x.gif)` (not shown):
+
+```{r plot-time-loop, message=FALSE}
+# plot each timepoint
+ts <- seq_len(dim(image(sdt))[1])
+ps <- lapply(ts, \(t) {
+    plotSpatialData() + 
+        plotImage(sdt, i="image", t=t) +
+        annotate("text",
+            x=Inf, y=Inf, hjust=1.2, vjust=-0.8, 
+            label=paste("t =", t), size=5, col="yellow") +
+        scalebar(image(sdt), len=150, col="purple") + 
+        theme(legend.position="none", 
+            axis.ticks=element_blank(),
+            axis.title=element_blank(),
+            axis.text=element_blank())
+})
+
+# get 'magick-image's
+library(magick)
+is <- lapply(ps, \(p) {
+    png <- tempfile(fileext=".png")
+    ggsave(png, p, width=6, height=6)
+    image_read(png)
+})
+
+# animate & write to .gif
+vid <- image_animate(image_join(is), fps=2)
+image_write(vid, gif <- "timeloop.gif")
+```
+
+::: {style="text-align: center;"}
+![](../timeloop.gif){width=50%}
+:::
+
+```{r include=FALSE}
+file.remove(gif)
+```
 
 ### Appendix
 
