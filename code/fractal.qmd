@@ -272,10 +272,7 @@ sapply(assays(se), as.vector)
 plotSpatialData() + 
     plotImage(sdt, i="image", t=1) + 
     scalebar(image(sdt), len=150, col="purple") + 
-    theme(legend.position="none", 
-          axis.ticks=element_blank(),
-          axis.title=element_blank(),
-          axis.text=element_blank())
+    theme_void() + theme(legend.position="none")
 ```
 
 Alternatively, we can loop through timepoints and generate an animation (.gif)
@@ -292,10 +289,7 @@ ps <- lapply(ts, \(t) {
             x=Inf, y=Inf, hjust=1.2, vjust=-0.8, 
             label=paste("t =", t), size=5, col="yellow") +
         scalebar(image(sdt), len=150, col="purple") + 
-        theme(legend.position="none", 
-            axis.ticks=element_blank(),
-            axis.title=element_blank(),
-            axis.text=element_blank())
+        theme_void() + theme(legend.position="none")
 })
 
 # get 'magick-image's
